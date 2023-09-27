@@ -77,9 +77,12 @@ type DefaultRule struct {
 	PackageName     Listable[string] `json:"package_name,omitempty"`
 	User            Listable[string] `json:"user,omitempty"`
 	UserID          Listable[int32]  `json:"user_id,omitempty"`
-	ClashMode       string           `json:"clash_mode,omitempty"`
-	Invert          bool             `json:"invert,omitempty"`
-	Outbound        string           `json:"outbound,omitempty"`
+	//
+	RuleProvider string `json:"@rule_provider,omitempty"`
+	//
+	ClashMode string `json:"clash_mode,omitempty"`
+	Invert    bool   `json:"invert,omitempty"`
+	Outbound  string `json:"outbound,omitempty"`
 }
 
 func (r DefaultRule) IsValid() bool {

@@ -16,6 +16,7 @@ import (
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/outbound"
 	"github.com/sagernet/sing-box/route"
+	"github.com/sagernet/sing-box/ruleprovider"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
@@ -26,15 +27,16 @@ import (
 var _ adapter.Service = (*Box)(nil)
 
 type Box struct {
-	createdAt    time.Time
-	router       adapter.Router
-	inbounds     []adapter.Inbound
-	outbounds    []adapter.Outbound
-	logFactory   log.Factory
-	logger       log.ContextLogger
-	preServices  map[string]adapter.Service
-	postServices map[string]adapter.Service
-	done         chan struct{}
+	createdAt     time.Time
+	router        adapter.Router
+	inbounds      []adapter.Inbound
+	outbounds     []adapter.Outbound
+	ruleProviders []adapter.RuleProvider
+	logFactory    log.Factory
+	logger        log.ContextLogger
+	preServices   map[string]adapter.Service
+	postServices  map[string]adapter.Service
+	done          chan struct{}
 }
 
 type Options struct {
@@ -76,17 +78,61 @@ func New(options Options) (*Box, error) {
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
 	}
+	routeOptions := common.PtrValueOrDefault(options.Route)
+	dnsOptions := common.PtrValueOrDefault(options.DNS)
+	var ruleProviders []adapter.RuleProvider
+	if len(options.RulProviders) > 0 {
+		ruleProviders = make([]adapter.RuleProvider, 0, len(options.RulProviders))
+		for i, ruleProviderOptions := range options.RulProviders {
+			var rp adapter.RuleProvider
+			var tag string
+			if ruleProviderOptions.Tag != "" {
+				tag = ruleProviderOptions.Tag
+			} else {
+				tag = F.ToString(i)
+				ruleProviderOptions.Tag = tag
+			}
+			rp, err = ruleprovider.NewRuleProvider(ctx, logFactory.NewLogger(F.ToString("ruleprovider[", tag, "]")), tag, ruleProviderOptions)
+			if err != nil {
+				return nil, E.Cause(err, "parse ruleprovider[", i, "]")
+			}
+			var dnsRules *[]option.DNSRule
+			var routeRules *[]option.Rule
+			if routeOptions.Rules != nil && len(routeOptions.Rules) > 0 {
+				routeRules = &routeOptions.Rules
+			}
+			if dnsOptions.Rules != nil && len(dnsOptions.Rules) > 0 {
+				dnsRules = &dnsOptions.Rules
+			}
+			newDNSRules, newRouteRules, err := rp.FormatRule(dnsRules, routeRules)
+			if err != nil {
+				return nil, E.Cause(err, "ruleprovider[", i, "] format rule")
+			}
+			if routeOptions.Rules != nil && len(routeOptions.Rules) > 0 {
+				routeOptions.Rules = newRouteRules
+			}
+			if dnsOptions.Rules != nil && len(dnsOptions.Rules) > 0 {
+				dnsOptions.Rules = newDNSRules
+			}
+			ruleProviders = append(ruleProviders, rp)
+		}
+	}
 	router, err := route.NewRouter(
 		ctx,
 		logFactory,
-		common.PtrValueOrDefault(options.Route),
-		common.PtrValueOrDefault(options.DNS),
+		routeOptions,
+		dnsOptions,
 		common.PtrValueOrDefault(options.NTP),
 		options.Inbounds,
 		options.PlatformInterface,
 	)
 	if err != nil {
 		return nil, E.Cause(err, "parse route options")
+	}
+	if len(ruleProviders) > 0 {
+		for _, ruleProvider := range ruleProviders {
+			ruleProvider.SetRouter(router)
+		}
 	}
 	inbounds := make([]adapter.Inbound, 0, len(options.Inbounds))
 	outbounds := make([]adapter.Outbound, 0, len(options.Outbounds))
@@ -134,7 +180,7 @@ func New(options Options) (*Box, error) {
 		common.Must(oErr)
 		outbounds = append(outbounds, out)
 		return out
-	})
+	}, ruleProviders)
 	if err != nil {
 		return nil, err
 	}
@@ -165,15 +211,16 @@ func New(options Options) (*Box, error) {
 		preServices["v2ray api"] = v2rayServer
 	}
 	return &Box{
-		router:       router,
-		inbounds:     inbounds,
-		outbounds:    outbounds,
-		createdAt:    createdAt,
-		logFactory:   logFactory,
-		logger:       logFactory.Logger(),
-		preServices:  preServices,
-		postServices: postServices,
-		done:         make(chan struct{}),
+		router:        router,
+		inbounds:      inbounds,
+		outbounds:     outbounds,
+		ruleProviders: ruleProviders,
+		createdAt:     createdAt,
+		logFactory:    logFactory,
+		logger:        logFactory.Logger(),
+		preServices:   preServices,
+		postServices:  postServices,
+		done:          make(chan struct{}),
 	}, nil
 }
 
@@ -244,6 +291,13 @@ func (s *Box) start() error {
 			return E.Cause(err, "start ", serviceName)
 		}
 	}
+	for _, ruleProvider := range s.ruleProviders {
+		s.logger.Trace("starting ruleprovider ", ruleProvider.Tag())
+		err = ruleProvider.Start()
+		if err != nil {
+			return E.Cause(err, "start ruleprovider ", ruleProvider.Tag())
+		}
+	}
 	for i, in := range s.inbounds {
 		var tag string
 		if in.Tag() == "" {
@@ -292,6 +346,12 @@ func (s *Box) Close() error {
 		s.logger.Trace("closing ", serviceName)
 		errors = E.Append(errors, service.Close(), func(err error) error {
 			return E.Cause(err, "close ", serviceName)
+		})
+	}
+	for _, ruleProvider := range s.ruleProviders {
+		s.logger.Trace("closing ruleprovider ", ruleProvider.Tag())
+		errors = E.Append(errors, ruleProvider.Close(), func(err error) error {
+			return E.Cause(err, "close ruleprovider ", ruleProvider.Tag())
 		})
 	}
 	for i, in := range s.inbounds {

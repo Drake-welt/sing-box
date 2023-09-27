@@ -76,12 +76,15 @@ type DefaultDNSRule struct {
 	PackageName     Listable[string]       `json:"package_name,omitempty"`
 	User            Listable[string]       `json:"user,omitempty"`
 	UserID          Listable[int32]        `json:"user_id,omitempty"`
-	Outbound        Listable[string]       `json:"outbound,omitempty"`
-	ClashMode       string                 `json:"clash_mode,omitempty"`
-	Invert          bool                   `json:"invert,omitempty"`
-	Server          string                 `json:"server,omitempty"`
-	DisableCache    bool                   `json:"disable_cache,omitempty"`
-	RewriteTTL      *uint32                `json:"rewrite_ttl,omitempty"`
+	//
+	RuleProvider string `json:"@rule_provider,omitempty"`
+	//
+	Outbound     Listable[string] `json:"outbound,omitempty"`
+	ClashMode    string           `json:"clash_mode,omitempty"`
+	Invert       bool             `json:"invert,omitempty"`
+	Server       string           `json:"server,omitempty"`
+	DisableCache bool             `json:"disable_cache,omitempty"`
+	RewriteTTL   *uint32          `json:"rewrite_ttl,omitempty"`
 }
 
 func (r DefaultDNSRule) IsValid() bool {

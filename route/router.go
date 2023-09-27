@@ -26,9 +26,9 @@ import (
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/outbound"
 	"github.com/sagernet/sing-box/transport/fakeip"
-	"github.com/sagernet/sing-dns"
-	"github.com/sagernet/sing-tun"
-	"github.com/sagernet/sing-vmess"
+	dns "github.com/sagernet/sing-dns"
+	tun "github.com/sagernet/sing-tun"
+	vmess "github.com/sagernet/sing-vmess"
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
@@ -53,6 +53,8 @@ type Router struct {
 	inboundByTag                       map[string]adapter.Inbound
 	outbounds                          []adapter.Outbound
 	outboundByTag                      map[string]adapter.Outbound
+	ruleProviders                      []adapter.RuleProvider
+	ruleProviderByTag                  map[string]adapter.RuleProvider
 	rules                              []adapter.Rule
 	defaultDetour                      string
 	defaultOutboundForConnection       adapter.Outbound
@@ -331,7 +333,7 @@ func NewRouter(
 	return router, nil
 }
 
-func (r *Router) Initialize(inbounds []adapter.Inbound, outbounds []adapter.Outbound, defaultOutbound func() adapter.Outbound) error {
+func (r *Router) Initialize(inbounds []adapter.Inbound, outbounds []adapter.Outbound, defaultOutbound func() adapter.Outbound, ruleProviders []adapter.RuleProvider) error {
 	inboundByTag := make(map[string]adapter.Inbound)
 	for _, inbound := range inbounds {
 		inboundByTag[inbound.Tag()] = inbound
@@ -339,6 +341,13 @@ func (r *Router) Initialize(inbounds []adapter.Inbound, outbounds []adapter.Outb
 	outboundByTag := make(map[string]adapter.Outbound)
 	for _, detour := range outbounds {
 		outboundByTag[detour.Tag()] = detour
+	}
+	var ruleProviderByTag map[string]adapter.RuleProvider
+	if len(ruleProviders) > 0 {
+		ruleProviderByTag = make(map[string]adapter.RuleProvider)
+		for _, ruleProvider := range ruleProviders {
+			ruleProviderByTag[ruleProvider.Tag()] = ruleProvider
+		}
 	}
 	var defaultOutboundForConnection adapter.Outbound
 	var defaultOutboundForPacketConnection adapter.Outbound
@@ -410,6 +419,8 @@ func (r *Router) Initialize(inbounds []adapter.Inbound, outbounds []adapter.Outb
 			return E.New("outbound not found for rule[", i, "]: ", rule.Outbound())
 		}
 	}
+	r.ruleProviders = ruleProviders
+	r.ruleProviderByTag = ruleProviderByTag
 	return nil
 }
 
@@ -1026,4 +1037,15 @@ func (r *Router) ResetNetwork() error {
 		transport.Reset()
 	}
 	return nil
+}
+
+func (r *Router) RuleProviders() []adapter.RuleProvider {
+	return r.ruleProviders
+}
+
+func (r *Router) RuleProvider(tag string) (ruleProvider adapter.RuleProvider, loaded bool) {
+	if r.ruleProviderByTag != nil {
+		ruleProvider, loaded = r.ruleProviderByTag[tag]
+	}
+	return
 }

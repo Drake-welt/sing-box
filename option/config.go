@@ -15,6 +15,7 @@ type _Options struct {
 	NTP          *NTPOptions          `json:"ntp,omitempty"`
 	Inbounds     []Inbound            `json:"inbounds,omitempty"`
 	Outbounds    []Outbound           `json:"outbounds,omitempty"`
+	RulProviders []RuleProvider       `json:"ruleproviders,omitempty"`
 	Route        *RouteOptions        `json:"route,omitempty"`
 	Experimental *ExperimentalOptions `json:"experimental,omitempty"`
 }
