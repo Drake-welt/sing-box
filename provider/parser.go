@@ -126,5 +126,8 @@ func overrideDialerOption(options option.DialerOptions, dialerOptions *option.Ov
 	if dialerOptions.FallbackDelay != nil && (options.FallbackDelay != option.Duration(0) || force) {
 		options.FallbackDelay = *dialerOptions.FallbackDelay
 	}
+	if dialerOptions.ResolveUDP != nil && (!options.ResolveUDP || force) {
+		options.ResolveUDP = *dialerOptions.ResolveUDP
+	}
 	return options
 }
