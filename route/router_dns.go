@@ -42,6 +42,7 @@ func (r *Router) matchDNS(ctx context.Context, allowFakeIP bool, index int) (con
 	if metadata == nil {
 		panic("no context")
 	}
+	defer metadata.ResetRuleCache()
 	if index < len(r.dnsRules) {
 		dnsRules := r.dnsRules
 		if index != -1 {
