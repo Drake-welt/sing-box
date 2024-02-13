@@ -396,6 +396,9 @@ func (r *Router) Initialize(inbounds []adapter.Inbound, outboundProviders []adap
 	}
 	outboundByTag := make(map[string]adapter.Outbound)
 	for _, detour := range outbounds {
+		if detour == nil {
+			return errors.New("outbound is nil")
+		}
 		outboundByTag[detour.Tag()] = detour
 	}
 	var defaultOutboundForConnection adapter.Outbound
@@ -809,7 +812,11 @@ func (r *Router) PostStart() error {
 
 func (r *Router) Outbound(tag string) (adapter.Outbound, bool) {
 	outbound, loaded := r.outboundByTag[tag]
-	return outbound, loaded
+	if !loaded || outbound == nil {
+		r.logger.ErrorContext(context.TODO(), "failed to find outbound by tag: ", tag, "; loaded: ", loaded)
+		return nil, false
+	}
+	return outbound, true
 }
 
 func (r *Router) OutboundWithProvider(tag string) (adapter.Outbound, bool) {
@@ -1233,7 +1240,12 @@ func (r *Router) match0(ctx context.Context, metadata *adapter.InboundContext, d
 			}
 		}
 		if rule.Match(metadata) {
+			// 获取 outbound
 			detour := rule.Outbound()
+			outbound, loaded := r.Outbound(detour)
+			if !loaded || outbound == nil {
+				return nil, defaultOutbound
+			}
 			r.logger.DebugContext(ctx, "match[", i, "] ", rule.String(), " => ", detour)
 			if outbound, loaded := r.Outbound(detour); loaded {
 				if len(metadata.CacheIPs) > 0 && r.FindoutRealOutboundType(outbound, metadata.Network) {
@@ -1254,8 +1266,18 @@ func (r *Router) match0(ctx context.Context, metadata *adapter.InboundContext, d
 }
 
 func (r *Router) FindoutRealOutboundType(outbound adapter.Outbound, network string) bool {
+	if outbound == nil {
+		// 返回错误或者其他适当的处理
+		r.logger.ErrorContext(context.TODO(), "error getting outbound: ", outbound, ", using default outbound")
+		return false
+	}
 	tag := O.RealOutboundTag(outbound, network)
+	r.logger.DebugContext(context.TODO(), "real outbound tag: ", tag)
 	detour, _ := r.Outbound(tag)
+	if detour == nil {
+		r.logger.ErrorContext(context.TODO(), "using default outbound: ", tag)
+		return false
+	}
 	dType := detour.Type()
 	return dType == C.TypeDirect
 }
