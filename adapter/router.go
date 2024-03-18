@@ -97,6 +97,7 @@ type Rule interface {
 
 type DNSRule interface {
 	Rule
+	MatchFallback(metadata *InboundContext, index int) (bool, string, string, int)
 	DisableCache() bool
 	RewriteTTL() *uint32
 	ClientSubnet() *netip.Prefix
