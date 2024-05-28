@@ -33,7 +33,7 @@ func New(ctx context.Context, router adapter.Router, logger log.ContextLogger, o
 		}
 	}
 	if options.HealthcheckUrl == "" {
-		options.HealthcheckUrl = "https://www.gstatic.com/generate_204"
+		options.HealthcheckUrl = "https://cp.cloudflare.com/generate_204"
 	}
 	switch options.Type {
 	case C.TypeLocalProvider:
