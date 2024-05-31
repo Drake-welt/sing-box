@@ -117,6 +117,7 @@ func (s *DialerForwarder) dialTCP() {
 	for {
 		conn, err := s.tcpListener.Accept()
 		if err != nil {
+			//nolint:staticcheck
 			if netError, isNetError := err.(net.Error); isNetError && netError.Temporary() {
 				s.logger.Error(err)
 				continue

@@ -3,7 +3,6 @@ package route
 import (
 	"net/netip"
 
-	"github.com/gofrs/uuid/v5"
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
@@ -11,6 +10,8 @@ import (
 	dns "github.com/sagernet/sing-dns"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
+
+	"github.com/gofrs/uuid/v5"
 )
 
 func NewFallbackRules(router adapter.Router, logger log.ContextLogger, fbOptions []option.FallBackRule) ([]FallbackRule, error) {

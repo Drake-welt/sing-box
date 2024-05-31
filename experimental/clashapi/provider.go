@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing/common"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/json/badjson"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
 func proxyProviderRouter(server *Server, router adapter.Router) http.Handler {
