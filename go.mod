@@ -56,8 +56,8 @@ require (
 )
 
 require (
-    github.com/ipsn/go-libtor v1.0.380 // indirect
-	github.com/robertkrimen/otto v0.2.1 // indirect
+	github.com/ipsn/go-libtor v1.0.380
+	github.com/robertkrimen/otto v0.2.1
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 )
 
