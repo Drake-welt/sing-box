@@ -273,7 +273,6 @@ func (p *RemoteProvider) UpdateProvider(ctx context.Context, router adapter.Rout
 	p.logger.Debug("update outbound provider ", p.tag, " from network")
 
 	err := p.fetchOnce(ctx, router)
-
 	if err != nil {
 		p.logger.Error(E.New("update outbound provider ", p.tag, " failed.", err))
 	}

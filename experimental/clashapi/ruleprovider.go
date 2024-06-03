@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 	"github.com/sagernet/sing-box/adapter"
 	F "github.com/sagernet/sing/common/format"
 	"github.com/sagernet/sing/common/json/badjson"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
 func ruleProviderRouter(server *Server, router adapter.Router) http.Handler {

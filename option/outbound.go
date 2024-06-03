@@ -110,6 +110,7 @@ func (h *Outbound) UnmarshalJSON(bytes []byte) error {
 	}
 	return nil
 }
+
 func (h *Outbound) Port() int {
 	var port uint16
 	switch h.Type {
